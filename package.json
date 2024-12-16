@@ -4,7 +4,7 @@
   "description": "작업자가 편리하게 데이터를 입력할 수 있는 서비스",
   "main": "index.js",
   "scripts": {
-    "start": "node ./app.js",
+    "start": "nodemon ./app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,9 +18,10 @@
   },
   "homepage": "https://github.com/Suah-Cho/croft-data-backend#readme",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mysql": "^2.18.1",
+    "mysql2": "^3.11.5",
     "sequelize": "^6.37.5"
   }
 }
