@@ -1,0 +1,26 @@
+{
+  "name": "croft-data-backend",
+  "version": "1.0.0",
+  "description": "작업자가 편리하게 데이터를 입력할 수 있는 서비스",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Suah-Cho/croft-data-backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Suah-Cho/croft-data-backend/issues"
+  },
+  "homepage": "https://github.com/Suah-Cho/croft-data-backend#readme",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql": "^2.18.1",
+    "sequelize": "^6.37.5"
+  }
+}
