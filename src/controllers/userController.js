@@ -84,6 +84,7 @@ const getUserID = async (email) => {
         const user_id = await user.findOne({
             where: {email: email}
         })
+        return user_id.id;
     } catch (error) {
         console.error(error);
         throw error;
@@ -93,14 +94,22 @@ const getUserID = async (email) => {
 const deleteUser = async (req, res) => {
 
     try {
-        const result = await user.update({
-            validation: false
-        }, {
-            where: getUserID(req.username)
-        });
-        console.log(result);
+        const email = req.user.username;
+        // const userId = await getUserID(email);
+
+        const result = await user.update(
+            {validation: false},
+            {where: {email: email}}
+        );
+
+        if (result[0] === 0) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
+
         res.status(200).json({
-            message: 'user delete successfully'
+            message: 'User deleted successfully'
         });
     } catch (error) {
         console.error(error);
