@@ -2,88 +2,156 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const user = require('../../models/users');
+const users = require('../../models/users');
+const tokens = require('../../models/tokens');
 const connection = require('../../config/db_utils');
-const { generateToken, refreshToken } = require('../utils/jwt');
+
+
+const sessions = {};
 
 const login = async (req, res) => {
-    // email & password
-    const { username, password } = req.body;
+
+    const { username, password, deviceType } = req.body;
 
     try {
-        const result = await user.findOne({
+        const result = await users.findOne({
             where: { email: username },
             attributes: ['id', 'password']
         });
 
-        bcrypt.compare(password, result['password'], (error, isMatch) => {
-            if (error) {
-                console.error('Wrong Password');
-                res.status(404).json({
-                    message: 'Password Wrong',
-                })
-                return;
-            }
-            if (isMatch) {
-                const token = generateToken({
-                    username: username,
-                    user_id: result['id']
-                })
+        // user 확인
+        if (!result) {
+            return res.status(401).send('User Not Found');
+        }
 
-                console.log('Password match!');
-                res.cookie('token', token, { httpOnly: true, maxAge: 3600000 });
-                // res.cookie('token', token, { maxAge: 3600000 });
-                res.status(200).json({
-                    message: 'Login Success',
-                    user_id: result['id'],
-                    token: token
-                })
-            } else {
-                console.error('Wrong Password');
-                res.status(404).json({
-                    message: 'Password Wrong',
-                })
-            }
-        })
+        if (bcrypt.compare(password, result.password)) {
+            console.log('Passwords match');
+
+            const { accessToken, refreshToken } = await generateToken(result.id, username, deviceType);
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                sameSite: 'Strict',
+                maxAge: 14 * 24 * 60 * 60 * 1000,
+            });
+            return res.status(200).json({
+                message: 'Login success',
+                accessToken: accessToken
+            })
+
+        } else {
+            console.log('Wrong Password');
+        }
+
     } catch (error) {
-        console.error(error);
+        console.log(error);
+        res.status(500).send({
+            "message" : "Something went wrong",
+            "error": error
+        });
     }
 };
 
+const generateToken = async (userId, email, deviceType) => {
+
+    /*
+        userId, email, deviceType 사용 (from req)
+        access token 만료 기준 : 1시간
+        refresh token 만료 기준 : 14일
+    */
+
+    const accessToken = jwt.sign({
+        userId: userId,
+        email: email,
+        deviceType: deviceType,
+        date: Date.now(),
+    }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
+    const refreshToken = jwt.sign({
+        userId: userId,
+        email: email,
+        deviceType: deviceType,
+        date: Date.now(),
+    }, process.env.JWT_REFRESH_SECRET_KEY);
+
+    // refresh token 저장 및 만료 시간 설정
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 14); // 14일 후 만료
+    console.log('Expires at', expiresAt);
+
+    // 기존 토큰 조회
+    const existingToken = await tokens.findOne({
+        where: { user_id: userId, device_type: deviceType }
+    })
+
+    if (existingToken) {
+        await tokens.update(
+            {
+                refresh_token: refreshToken,
+                updatedAt: expiresAt
+            },
+            {
+                where: { user_id: userId, device_type: deviceType }
+            }
+        )
+    } else {
+        await tokens.upsert(
+            {
+                user_id: userId,
+                device_type: deviceType,
+                refresh_token: refreshToken,
+                updatedAt: expiresAt
+            },
+            {
+                where: {
+                    user_id: userId,
+                    device_type: deviceType
+                }
+            }
+        )
+    }
+
+    return { access_token: accessToken, refresh_token: refreshToken };
+}
+
 const logout = async (req, res) => {
     try {
-        console.log(req.cookies);
 
-        const token = req.cookies.token;
+        const refreshToken = req.cookies.refreshToken;
 
-        if (!token) {
-            res.status(401).json({
-                message: 'Token not found, Please Login'
+        try {
+            if (! refreshToken ) return res.status(401).send('Refresh token not found');
+
+            // refresh 토큰 삭제
+            await tokens.destroy({
+                where: {
+                    refreshToken: refreshToken
+                }
             });
-            return;
-        }
 
-        const decoded = jwt.decode(token);
-
-        if (!decoded) {
-            res.status(401).json({
-                message: 'Invalid Token, Check login status'
+            // 쿠키에서 refresh token 삭제
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                sameSite: 'Strict',
             });
-            return;
-        }
 
-        res.clearCookie('token');
-        res.status(200).json({
-            message: 'Logout Success'
-        });
+            return res.status(200).json({
+                message: 'Logout success'
+            })
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({
+                message: 'Internal Server Error',
+                error: error
+            })
+        }
     } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            message: 'Server Error',
-            error: error.message
-        });
+        console.log(error);
+        return res.status(401).json({
+            message: 'Unauthorized',
+            error: error
+        })
     }
-    
 };
 
 module.exports = { login, logout };

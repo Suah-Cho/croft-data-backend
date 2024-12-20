@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="croft@alter-rds.cdy4as468gq0.ap-northeast-2.rds.amazonaws.com" uuid="8934b488-a69e-45dd-be2a-251ec69e9684">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://alter-rds.cdy4as468gq0.ap-northeast-2.rds.amazonaws.com:5432/croft</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>
